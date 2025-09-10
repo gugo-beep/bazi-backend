@@ -8,14 +8,10 @@ import ZHI_HIDE_GAN from '../data/ZHI_HIDE_GAN.js';
 import { calculateHarmRelations } from './harmCalculator.js';
 import { calculateShensha } from './shenshaCalculator.js';
 import { calculateAuxiliaryFeatures } from './auxiliaryCalculator.js';
-// 导入常量
-import { GENDER, PILLAR_TYPE, GAN_ZHI_TYPE, ID, SHEN_SHEN } from './constants.js';
+// 导入统一的常量
+import { GENDER, PILLAR_TYPE, GAN_ZHI_TYPE, ID, SHEN_SHEN, GAN_ZHI_CYCLE, YANG_GAN } from './constants.js';
 
-// ... 文件顶部的辅助工具代码保持不变 ...
-const GAN = ['甲', '乙', '丙', '丁', '戊', '己', '庚', '辛', '壬', '癸'];
-const ZHI = ['子', '丑', '寅', '卯', '辰', '巳', '午', '未', '申', '酉', '戌', '亥'];
-const GAN_ZHI_CYCLE = Array.from({ length: 60 }, (_, i) => GAN[i % 10] + ZHI[i % 12]);
-
+// ... 辅助工具代码 ...
 function getNextGanZhi(ganzhi, step = 1) {
   const currentIndex = GAN_ZHI_CYCLE.indexOf(ganzhi);
   if (currentIndex === -1) return null;
@@ -35,8 +31,7 @@ function calculateCangGan(zhi, dayGan) {
 async function calculateQiYun(gregorianDateStr, gender, yearGan) {
   const birthDate = new Date(gregorianDateStr);
   const birthYear = birthDate.getFullYear();
-  const yangGan = ['甲', '丙', '戊', '庚', '壬'];
-  const isYangNian = yangGan.includes(yearGan);
+  const isYangNian = YANG_GAN.includes(yearGan); // 使用常量
   // 使用常量
   const isShunPai = (isYangNian && gender === GENDER.MALE) || (!isYangNian && gender === GENDER.FEMALE);
 

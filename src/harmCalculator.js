@@ -1,11 +1,6 @@
 import harmRules from '../data/harmRules.js';
-
-// NEW: Unicode排序常量，用于键名规范化
-const GAN_ORDER = ["丁", "丙", "乙", "壬", "己", "庚", "戊", "甲", "癸", "辛"];
-const ZHI_ORDER = ["丑", "亥", "午", "卯", "子", "寅", "巳", "戌", "未", "申", "辰", "酉"];
-const CHAR_ORDER_MAP = new Map();
-GAN_ORDER.forEach((char, index) => CHAR_ORDER_MAP.set(char, index));
-ZHI_ORDER.forEach((char, index) => CHAR_ORDER_MAP.set(char, index));
+// 导入统一的常量
+import { CHAR_ORDER_MAP } from './constants.js';
 
 function getNormalizedKey(chars) {
     return chars.sort((a, b) => (CHAR_ORDER_MAP.get(a) || 0) - (CHAR_ORDER_MAP.get(b) || 0)).join('');

@@ -1,18 +1,13 @@
 // gugo-beep/bazi-backend/bazi-backend-18275ce3be8ede12177b43420d0b622777a7d327/src/inputProcessor.js
 
 import * as databaseService from './databaseService.js';
-
-// --- 常量定义 ---
-
-// 用于验证四柱输入的60甲子表
-const GAN = ['甲', '乙', '丙', '丁', '戊', '己', '庚', '辛', '壬', '癸'];
-const ZHI = ['子', '丑', '寅', '卯', '辰', '巳', '午', '未', '申', '酉', '戌', '亥'];
-const GAN_ZHI_CYCLE = new Set(Array.from({ length: 60 }, (_, i) => GAN[i % 10] + ZHI[i % 12]));
-
-// 用于解析中文农历日期的映射表
-const CHINESE_CHAR_TO_NUMBER = { '〇': 0, '一': 1, '二': 2, '三': 3, '四': 4, '五': 5, '六': 6, '七': 7, '八': 8, '九': 9, '十': 10 };
-const CHINESE_MONTH_TO_NUMBER = { '正': 1, '二': 2, '三': 3, '四': 4, '五': 5, '六': 6, '七': 7, '八': 8, '九': 9, '十': 10, '冬': 11, '腊': 12 };
-const CHINESE_DAY_MAP = { '初': 0, '十': 10, '廿': 20, '卅': 30 };
+// 导入统一的常量
+import {
+    GAN_ZHI_CYCLE_SET,
+    CHINESE_CHAR_TO_NUMBER,
+    CHINESE_MONTH_TO_NUMBER,
+    CHINESE_DAY_MAP
+} from './constants.js';
 
 // --- 核心功能函数 ---
 
@@ -100,7 +95,7 @@ export function validatePillars(pillars) {
     if (!Array.isArray(pillars) || pillars.length !== 4) {
         return false;
     }
-    return pillars.every(p => GAN_ZHI_CYCLE.has(p));
+    return pillars.every(p => GAN_ZHI_CYCLE_SET.has(p)); // 使用常量
 }
 
 /**
