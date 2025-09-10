@@ -1,23 +1,21 @@
 // bazi-backend/src/auxiliaryCalculator.js
 
 import * as databaseService from './databaseService.js';
+// 导入统一的常量
+import {
+    CHANG_SHENG_CYCLE,
+    CHANG_SHENG_START,
+    YUE_LING_DATA,
+    ZHI, // ZHI_CYCLE 已在 constants.js 中定义为 ZHI
+    YANG_GAN
+} from './constants.js';
 
-// ... 核心数据表 (长生十二宫, 月令等) 保持不变 ...
-const CHANG_SHENG_CYCLE = ['长生', '沐浴', '冠带', '临官', '帝旺', '衰', '病', '死', '墓', '绝', '胎', '养'];
-const CHANG_SHENG_START = {
-    '甲': '亥', '丙': '寅', '戊': '寅', '庚': '巳', '壬': '申',
-    '乙': '午', '丁': '酉', '己': '酉', '辛': '子', '癸': '卯'
-};
-const ZHI_CYCLE = ['子', '丑', '寅', '卯', '辰', '巳', '午', '未', '申', '酉', '戌', '亥'];
-const YUE_LING_DATA = {
-    '寅': [{ gan: '戊', days: 7 }, { gan: '丙', days: 7 }, { gan: '甲', days: 16 }], '卯': [{ gan: '甲', days: 10 }, { gan: '乙', days: 20 }], '辰': [{ gan: '乙', days: 9 }, { gan: '癸', days: 3 }, { gan: '戊', days: 18 }], '巳': [{ gan: '戊', days: 5 }, { gan: '庚', days: 9 }, { gan: '丙', days: 16 }], '午': [{ gan: '丙', days: 10 }, { gan: '己', days: 9 }, { gan: '丁', days: 11 }], '未': [{ gan: '丁', days: 9 }, { gan: '乙', days: 3 }, { gan: '己', days: 18 }], '申': [{ gan: '己', days: 7 }, { gan: '壬', days: 7 }, { gan: '庚', days: 16 }], '酉': [{ gan: '庚', days: 10 }, { gan: '辛', days: 20 }], '戌': [{ gan: '辛', days: 9 }, { gan: '丁', days: 3 }, { gan: '戊', days: 18 }], '亥': [{ gan: '戊', days: 7 }, { gan: '甲', days: 7 }, { gan: '壬', days: 16 }], '子': [{ gan: '壬', days: 10 }, { gan: '癸', days: 20 }], '丑': [{ gan: '癸', days: 9 }, { gan: '辛', days: 3 }, { gan: '己', days: 18 }]
-};
 
 function getChangShengStatus(gan, zhi) {
-    const isYang = ['甲', '丙', '戊', '庚', '壬'].includes(gan);
+    const isYang = YANG_GAN.includes(gan);
     const startZhi = CHANG_SHENG_START[gan];
-    const startIdx = ZHI_CYCLE.indexOf(startZhi);
-    const targetIdx = ZHI_CYCLE.indexOf(zhi);
+    const startIdx = ZHI.indexOf(startZhi);
+    const targetIdx = ZHI.indexOf(zhi);
     let diff = targetIdx - startIdx;
     if (isYang) { if (diff < 0) diff += 12; } else { diff = -diff; if (diff < 0) diff += 12; }
     return CHANG_SHENG_CYCLE[diff];

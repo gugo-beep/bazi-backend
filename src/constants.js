@@ -69,3 +69,18 @@ export const CHAR_ORDER_MAP = createOrderMap();
 export const CHINESE_CHAR_TO_NUMBER = { '〇': 0, '一': 1, '二': 2, '三': 3, '四': 4, '五': 5, '六': 6, '七': 7, '八': 8, '九': 9, '十': 10 };
 export const CHINESE_MONTH_TO_NUMBER = { '正': 1, '二': 2, '三': 3, '四': 4, '五': 5, '六': 6, '七': 7, '八': 8, '九': 9, '十': 10, '冬': 11, '腊': 12 };
 export const CHINESE_DAY_MAP = { '初': 0, '十': 10, '廿': 20, '卅': 30 };
+
+
+// --- 辅助计算常量 (用于 auxiliaryCalculator) ---
+
+// 长生十二宫
+export const CHANG_SHENG_CYCLE = ['长生', '沐浴', '冠带', '临官', '帝旺', '衰', '病', '死', '墓', '绝', '胎', '养'];
+export const CHANG_SHENG_START = {
+    '甲': '亥', '丙': '寅', '戊': '寅', '庚': '巳', '壬': '申',
+    '乙': '午', '丁': '酉', '己': '酉', '辛': '子', '癸': '卯'
+};
+
+// 月令用事
+export const YUE_LING_DATA = {
+    '寅': [{ gan: '戊', days: 7 }, { gan: '丙', days: 7 }, { gan: '甲', days: 16 }], '卯': [{ gan: '甲', days: 10 }, { gan: '乙', days: 20 }], '辰': [{ gan: '乙', days: 9 }, { gan: '癸', days: 3 }, { gan: '戊', days: 18 }], '巳': [{ gan: '戊', days: 5 }, { gan: '庚', days: 9 }, { gan: '丙', days: 16 }], '午': [{ gan: '丙', days: 10 }, { gan: '己', days: 9 }, { gan: '丁', days: 11 }], '未': [{ gan: '丁', days: 9 }, { gan: '乙', days: 3 }, { gan: '己', days: 18 }], '申': [{ gan: '己', days: 7 }, { gan: '壬', days: 7 }, { gan: '庚', days: 16 }], '酉': [{ gan: '庚', days: 10 }, { gan: '辛', days: 20 }], '戌': [{ gan: '辛', days: 9 }, { gan: '丁', days: 3 }, { gan: '戊', days: 18 }], '亥': [{ gan: '戊', days: 7 }, { gan: '甲', days: 7 }, { gan: '壬', days: 16 }], '子': [{ gan: '壬', days: 10 }, { gan: '癸', days: 20 }], '丑': [{ gan: '癸', days: 9 }, { gan: '辛', days: 3 }, { gan: '己', days: 18 }]
+};
