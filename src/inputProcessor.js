@@ -1,15 +1,73 @@
-// gugo-beep/backend/backend-4be0ba13368314c6714a4251deaaa86cb07287d8/src/inputProcessor.js
+// gugo-beep/bazi-backend/bazi-backend-18275ce3be8ede12177b43420d0b622777a7d327/src/inputProcessor.js
 
 import * as databaseService from './databaseService.js';
 
-// 60甲子表，用于验证四柱输入的合法性
+// --- 常量定义 ---
+
+// 用于验证四柱输入的60甲子表
 const GAN = ['甲', '乙', '丙', '丁', '戊', '己', '庚', '辛', '壬', '癸'];
 const ZHI = ['子', '丑', '寅', '卯', '辰', '巳', '午', '未', '申', '酉', '戌', '亥'];
 const GAN_ZHI_CYCLE = new Set(Array.from({ length: 60 }, (_, i) => GAN[i % 10] + ZHI[i % 12]));
 
-// 任务 1.2 (修正): 正则表达式现在要求完整的时和分
-const lunarRegex = /^lunar:(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2})(-true)?$/;
+// 用于解析中文农历日期的映射表
+const CHINESE_CHAR_TO_NUMBER = { '〇': 0, '一': 1, '二': 2, '三': 3, '四': 4, '五': 5, '六': 6, '七': 7, '八': 8, '九': 9, '十': 10 };
+const CHINESE_MONTH_TO_NUMBER = { '正': 1, '二': 2, '三': 3, '四': 4, '五': 5, '六': 6, '七': 7, '八': 8, '九': 9, '十': 10, '冬': 11, '腊': 12 };
+const CHINESE_DAY_MAP = { '初': 0, '十': 10, '廿': 20, '卅': 30 };
 
+// --- 核心功能函数 ---
+
+/**
+ * [V3 - 修正版] 核心函数：解析中文农历日期字符串
+ * @param {string} dateStr - 例如 "二〇〇二年八月十四"
+ * @returns {{year: number, month: number, day: number, isLeap: boolean}|null}
+ */
+function parseChineseLunarDate(dateStr) {
+    const isLeap = dateStr.includes('闰');
+    // 兼容 "年/月" 和 "-" 分隔符
+    const cleanedStr = dateStr.replace('年', '-').replace('月', '-').replace('日', '').replace('闰', '');
+
+    const parts = cleanedStr.split('-');
+    if (parts.length !== 3) return null;
+
+    let [yearPart, monthPart, dayPart] = parts;
+
+    // 1. 解析年份
+    const year = parseInt(
+        yearPart.split('').map(char => CHINESE_CHAR_TO_NUMBER[char]).join(''),
+        10
+    );
+
+    // 2. 解析月份
+    const month = CHINESE_MONTH_TO_NUMBER[monthPart];
+
+    // 3. [修正] 解析日期 (更健壮的逻辑)
+    let day = 0;
+    if (dayPart.startsWith('廿') || dayPart.startsWith('卅')) { // 处理 20-30
+        day = CHINESE_DAY_MAP[dayPart[0]];
+        day += CHINESE_CHAR_TO_NUMBER[dayPart[1]] || 0;
+    } else if (dayPart.startsWith('十')) { // 处理 10-19
+        day = 10;
+        day += CHINESE_CHAR_TO_NUMBER[dayPart[1]] || 0;
+    } else if (dayPart.startsWith('初')) { // 处理 1-9
+        day = CHINESE_CHAR_TO_NUMBER[dayPart[1]] || 0;
+    } else if (dayPart === '二十') {
+        day = 20;
+    } else if (dayPart === '三十') {
+        day = 30;
+    }
+
+
+    if (isNaN(year) || !month || !day) return null;
+
+    return { year, month, day, isLeap };
+}
+
+
+/**
+ * 检测输入字符串的类型
+ * @param {string} input - 用户输入
+ * @returns {'gregorian' | 'lunar' | 'pillars'}
+ */
 export function detectInputType(input) {
     if (input.startsWith('lunar:')) {
         return 'lunar';
@@ -23,37 +81,20 @@ export function detectInputType(input) {
 }
 
 /**
- * 任务 1.3.1: 验证公历日期字符串格式
+ * 验证公历日期字符串格式
  * @param {string} dateStr - 公历日期字符串
- * @returns {boolean} 是否有效
+ * @returns {boolean}
  */
 export function validateGregorian(dateStr) {
+    // 格式: YYYY-MM-DD HH:MM:SS
     const regex = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/;
     return regex.test(dateStr);
 }
 
 /**
- * 任务 1.3.2 (修正): 验证从 lunar: 字符串解析出的数据，包括小时和分钟
- * @param {object | null} lunarData - { year, month, day, hour, minute, isLeap }
- * @returns {boolean} 是否有效
- */
-export function validateLunar(lunarData) {
-    if (!lunarData) return false;
-    const { year, month, day, hour, minute } = lunarData;
-
-    if (isNaN(year) || isNaN(month) || isNaN(day) || isNaN(hour) || isNaN(minute)) return false;
-    if (month < 1 || month > 12) return false;
-    if (day < 1 || day > 30) return false; 
-    if (hour < 0 || hour > 23) return false;
-    if (minute < 0 || minute > 59) return false;
-    
-    return true;
-}
-
-/**
- * 任务 1.3.3: 验证四柱干支的合法性
+ * 验证四柱干支的合法性
  * @param {string[]} pillars - 四柱数组
- * @returns {boolean} 是否有效
+ * @returns {boolean}
  */
 export function validatePillars(pillars) {
     if (!Array.isArray(pillars) || pillars.length !== 4) {
@@ -63,9 +104,10 @@ export function validatePillars(pillars) {
 }
 
 /**
- * 任务 1.4 (重写): 核心转换函数，将任何合法输入标准化为一个或多个公历日期
+ * [V2 - 彻底重写] 核心转换函数，将任何合法输入标准化为一个或多个公历日期时间字符串
+ * 对应我们方案中的第一步 "findDates(userInput)"
  * @param {string} input - 用户输入
- * @returns {Promise<string[]>} - 一个或多个公历日期字符串组成的数组
+ * @returns {Promise<string[]>} - 一个或多个公历日期时间字符串组成的数组
  */
 export async function normalizeToGregorian(input) {
     const type = detectInputType(input);
@@ -74,37 +116,55 @@ export async function normalizeToGregorian(input) {
         case 'gregorian': {
             const fullDate = input.length === 16 ? `${input}:00` : input;
             if (!validateGregorian(fullDate)) {
-                throw new Error('无效的公历日期格式。请输入 "YYYY-MM-DD HH:MM:SS" 格式。');
+                throw new Error('无效的公历日期格式。请输入 "YYYY-MM-DD HH:MM:SS" 或 "YYYY-MM-DD HH:MM" 格式。');
             }
             return [fullDate];
         }
 
         case 'lunar': {
-            const match = input.match(lunarRegex);
-            if (!match) {
-                 throw new Error('无效的农历日期格式。请输入 "lunar:YYYY-MM-DD HH:MM" 格式，例如 "lunar:2004-02-13 04:20"。');
-            }
-            
-            const [, year, month, day, hour, minute, isLeapStr] = match;
-            
-            const lunarData = {
-                year: parseInt(year, 10),
-                month: parseInt(month, 10),
-                day: parseInt(day, 10),
-                hour: parseInt(hour, 10),
-                minute: parseInt(minute, 10),
-                isLeap: !!isLeapStr
-            };
-
-            if (!validateLunar(lunarData)) {
-                throw new Error('无效的农历日期数据（例如月份超出1-12范围）。');
+            const content = input.substring(6).trim(); // "二〇〇二年八月十四 08:00"
+            const lastSpaceIndex = content.lastIndexOf(' ');
+            if (lastSpaceIndex === -1) {
+                throw new Error('无效的农历格式，缺少时间部分。正确格式如 "lunar:二〇〇二年八月十四 08:00"。');
             }
 
-            const dates = await databaseService.findDatesByLunar(lunarData);
-            if (dates.length === 0) {
-                throw new Error('未找到与该农历日期匹配的公历日期。请检查日期是否有效（如闰月是否存在）。');
+            const datePartStr = content.substring(0, lastSpaceIndex); // "二〇〇二年八月十四"
+            const timePartStr = content.substring(lastSpaceIndex + 1); // "08:00"
+
+            let lunarData = parseChineseLunarDate(datePartStr);
+            
+            if (!lunarData) {
+                 // 增加对数字格式的兼容
+                const parts = datePartStr.split(/[-年月]/).filter(p => p);
+                if (parts.length >= 3) {
+                    lunarData = {
+                        year: parseInt(parts[0], 10),
+                        month: parseInt(parts[1], 10),
+                        day: parseInt(parts[2], 10),
+                        isLeap: datePartStr.includes('闰')
+                    };
+                } else {
+                    throw new Error(`无法解析农历日期部分: "${datePartStr}"`);
+                }
             }
-            return dates;
+            
+            // 查询对应的公历年月日
+            const gregorianDateParts = await databaseService.findGregorianDateByLunar(lunarData);
+            
+            if (!gregorianDateParts) {
+                throw new Error(`输入的农历日期无效或不存在: "${datePartStr}"。请检查年份、月份、日期或闰月是否正确。`);
+            }
+
+            const { year, month, day } = gregorianDateParts;
+            const time = timePartStr.length === 5 ? `${timePartStr}:00` : timePartStr; // 补全秒
+            
+            const gregorianDateTime = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')} ${time}`;
+            
+            if (!validateGregorian(gregorianDateTime)) {
+                 throw new Error(`根据农历转换后的公历日期格式不正确: ${gregorianDateTime}`);
+            }
+
+            return [gregorianDateTime];
         }
 
         case 'pillars': {
@@ -122,7 +182,7 @@ export async function normalizeToGregorian(input) {
                 hour_pillar: pillars[3],
             };
 
-            const dates = await databaseService.findDatesByPillars(pillarObj);
+            const dates = await databaseService.findAllDatesByPillars(pillarObj);
             if (dates.length === 0) {
                 throw new Error('未找到与该四柱匹配的公历日期。');
             }

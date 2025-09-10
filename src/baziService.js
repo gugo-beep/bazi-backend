@@ -1,7 +1,7 @@
-// gugo-beep/backend/backend-4be0ba13368314c6714a4251deaaa86cb07287d8/src/baziService.js
+// gugo-beep/bazi-backend/bazi-backend-18275ce3be8ede12177b43420d0b622777a7d327/src/baziService.js
 
 import * as databaseService from './databaseService.js';
-import * as inputProcessor from './inputProcessor.js'; // 任务 3.1: 引入新模块
+import * as inputProcessor from './inputProcessor.js';
 import NA_YIN from '../data/NA_YIN.js';
 import SHI_SHEN_GAN from '../data/SHI_SHEN_GAN.js';
 import ZHI_HIDE_GAN from '../data/ZHI_HIDE_GAN.js';
@@ -21,7 +21,6 @@ function getNextGanZhi(ganzhi, step = 1) {
   return GAN_ZHI_CYCLE[nextIndex];
 }
 
-// ... calculateCangGan, calculateQiYun, generateDayun, generateOriginalPillar 函数保持不变 ...
 function calculateCangGan(zhi, dayGan) {
   const hideGans = ZHI_HIDE_GAN[zhi] || [];
   return hideGans.map(item => ({
@@ -235,24 +234,14 @@ function createCalculationContext(baziProfile, gender, gregorianDate) {
   return { baziProfile, baziIndex, flatMap, gender, gregorianDate };
 }
 
+
 /**
- * 主服务函数，现接收用户原始输入
- * @param {string} userInput - 用户的原始输入 (公历, 农历, 或四柱)
+ * [V2] 核心计算函数：只为一个明确的公历日期进行排盘
+ * @param {string} gregorianDate - 唯一、明确的公历日期 YYYY-MM-DD HH:MM:SS
  * @param {string} gender - 性别
  * @returns {Promise<object>} 完整的八字分析 JSON 对象
  */
-export async function generateBaziProfile(userInput, gender) {
-    // 任务 3.1: 调用 inputProcessor 进行输入标准化
-    const gregorianDates = await inputProcessor.normalizeToGregorian(userInput);
-    
-    // 如果返回多个日期，提示用户选择（当前实现为自动选择第一个）
-    if (gregorianDates.length > 1) {
-        console.warn(`注意：输入的四柱匹配到 ${gregorianDates.length} 个可能的公历日期。`);
-        console.warn(`将使用第一个匹配结果进行计算: ${gregorianDates[0]}`);
-    }
-    const gregorianDate = gregorianDates[0];
-
-
+async function calculateBaziProfileForSingleDate(gregorianDate, gender) {
   const pillarsFromDb = await databaseService.getBaziPillars(gregorianDate);
   if (!pillarsFromDb) {
       throw new Error(`无法从数据库中找到日期 ${gregorianDate} 对应的四柱信息。`);
@@ -284,10 +273,10 @@ export async function generateBaziProfile(userInput, gender) {
       gender,
       dayMaster: dayPillar.gan.value,
       exactQiYunDate: qiYunInfo.exactQiYunDate,
-      lunarDate: pillarsFromDb.lunar_date_str, // 添加农历日期
-      taiYuan: pillarsFromDb.tai_yuan, // 胎元
-      mingGong: pillarsFromDb.ming_gong, // 命宫
-      shenGong: pillarsFromDb.shen_gong // 身宫
+      lunarDate: pillarsFromDb.lunar_date_str,
+      taiYuan: pillarsFromDb.tai_yuan,
+      mingGong: pillarsFromDb.ming_gong,
+      shenGong: pillarsFromDb.shen_gong
     },
     yuanju: {
       year: baziProfile.yearPillar,
@@ -300,4 +289,28 @@ export async function generateBaziProfile(userInput, gender) {
   };
 
   return finalOutput;
+}
+
+
+/**
+ * [V2] 主服务入口函数，现拆分为两步
+ * 第一步：根据用户输入找到所有可能的公历日期
+ * @param {string} userInput - 用户的原始输入 (公历, 农历, 或四柱)
+ * @returns {Promise<string[]>} 一个包含所有可能性公历日期的数组
+ */
+export async function findPossibleGregorianDates(userInput) {
+    const gregorianDates = await inputProcessor.normalizeToGregorian(userInput);
+    return gregorianDates;
+}
+
+/**
+ * [V2] 主服务入口函数
+ * 第二步：根据用户选择的公历日期进行计算
+ * @param {string} chosenDate - 用户最终选择的公历日期
+ * @param {string} gender - 性别
+ * @returns {Promise<object>} 完整的八字分析 JSON 对象
+ */
+export async function generateBaziProfile(chosenDate, gender) {
+    // 现在这个函数直接调用核心计算模块
+    return await calculateBaziProfileForSingleDate(chosenDate, gender);
 }

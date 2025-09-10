@@ -1,4 +1,4 @@
-// gugo-beep/backend/backend-4be0ba13368314c6714a4251deaaa86cb07287d8/src/databaseService.js
+// gugo-beep/bazi-backend/bazi-backend-18275ce3be8ede12177b43420d0b622777a7d327/src/databaseService.js
 
 import sqlite3 from 'sqlite3';
 import path from 'path';
@@ -39,7 +39,7 @@ const getSolarTermsDb = () => {
 export const getBaziPillars = (dateTimeString) => {
     const db = getBaziDb();
     const sql = `
-        SELECT year_pillar, month_pillar, day_pillar, hour_pillar,Lunar_date_str,tai_yuan,ming_gong,shen_gong
+        SELECT year_pillar, month_pillar, day_pillar, hour_pillar, lunar_date_str, tai_yuan, ming_gong, shen_gong
         FROM Pillars 
         WHERE gregorian_datetime <= ? 
         ORDER BY gregorian_datetime DESC 
@@ -51,6 +51,7 @@ export const getBaziPillars = (dateTimeString) => {
         });
     });
 };
+
 export const getAdjacentSolarTerm = (dateTimeString, direction) => {
     const db = getSolarTermsDb();
     const isAfter = direction === 'after';
@@ -68,6 +69,7 @@ export const getAdjacentSolarTerm = (dateTimeString, direction) => {
         });
     });
 };
+
 export const getLiChunForYear = (year) => {
     const db = getSolarTermsDb();
     const sql = `
@@ -82,6 +84,7 @@ export const getLiChunForYear = (year) => {
         });
     });
 };
+
 export const getJieQiInRange = (startYear, endYear) => {
     const db = getSolarTermsDb();
     const JIE_LIST = `('立春', '惊蛰', '清明', '立夏', '芒种', '小暑', '立秋', '白露', '寒露', '立冬', '大雪', '小寒')`;
@@ -97,7 +100,13 @@ export const getJieQiInRange = (startYear, endYear) => {
         });
     });
 };
-export const findDatesByPillars = (pillars) => {
+
+/**
+ * [重构] 根据四柱信息，查找所有匹配的公历日期时间
+ * @param {object} pillars - { year_pillar, month_pillar, day_pillar, hour_pillar }
+ * @returns {Promise<string[]>} - 匹配的公历日期时间字符串数组
+ */
+export const findAllDatesByPillars = (pillars) => {
     const db = getBaziDb();
     const sql = `
         SELECT gregorian_datetime 
@@ -112,70 +121,39 @@ export const findDatesByPillars = (pillars) => {
     });
 };
 
-
 /**
- * 任务 2.1 (重写): 根据农历精确查询公历生日
- * @param {object} lunarData - { year, month, day, hour, minute, isLeap }
- * @returns {Promise<string[]>} 包含唯一公历日期字符串的数组，或空数组
+ * [V2 - 彻底重写] 根据数字化的农历年月日和闰月信息，精确查找对应的公历年月日
+ * @param {object} lunarData - { year, month, day, isLeap }
+ * @returns {Promise<{year: number, month: number, day: number}|null>} 返回包含公历年月日的对象，如果未找到则返回null
  */
-export const findDatesByLunar = (lunarData) => {
+export const findGregorianDateByLunar = (lunarData) => {
     const db = getBaziDb();
-
-    // 1. 精确的数字到汉字转换
-    const toChineseYear = (year) => String(year).split('').map(char => '〇一二三四五六七八九'[char]).join('');
-    const toChineseMonth = (month, isLeap) => (isLeap ? '闰' : '') + ['正', '二', '三', '四', '五', '六', '七', '八', '九', '十', '冬', '腊'][month - 1] + '月';
-    const toChineseDay = (day) => {
-        if (day <= 10) return '初' + '一二三四五六七八九十'[day-1];
-        if (day < 20) return '十' + '一二三四五六七八九'[day-11];
-        if (day === 20) return '二十';
-        if (day < 30) return '廿' + '一二三四五六七八九'[day-21];
-        if (day === 30) return '三十';
-        return '';
-    };
-
-    // 2. 构造精确的查询字符串 (年月日)
-    const yearStr = toChineseYear(lunarData.year);
-    const monthStr = toChineseMonth(lunarData.month, lunarData.isLeap);
-    const dayStr = toChineseDay(lunarData.day);
-    const searchTerm = `${yearStr}年${monthStr}${dayStr}`;
-    
-    // 3. 查询当天所有时辰的记录
-    const sql = `SELECT gregorian_datetime FROM Pillars WHERE lunar_date_str LIKE ?`;
+    const sql = `
+        SELECT gregorian_year, gregorian_month, gregorian_day
+        FROM Pillars
+        WHERE
+            lunar_year = ? AND
+            lunar_month = ? AND
+            lunar_day = ? AND
+            is_leap_month = ?
+        LIMIT 1`;
+        
+    const params = [lunarData.year, lunarData.month, lunarData.day, lunarData.isLeap ? 1 : 0];
 
     return new Promise((resolve, reject) => {
-        db.all(sql, [`${searchTerm}%`], (err, rows) => {
+        db.get(sql, params, (err, row) => {
             if (err) {
-                return reject(new Error(`根据农历查询日期时出错: ${err.message}`));
+                return reject(new Error(`根据农历查询公历日期时出错: ${err.message}`));
             }
-            if (rows.length === 0) {
-                return resolve([]);
+            if (row) {
+                resolve({
+                    year: row.gregorian_year,
+                    month: row.gregorian_month,
+                    day: row.gregorian_day
+                });
+            } else {
+                resolve(null); // 如果没有找到匹配的日期，返回 null
             }
-            
-            // 4. 在内存中根据小时和分钟进行精确筛选
-            const targetHour = lunarData.hour;
-            const targetMinute = lunarData.minute;
-
-            // 寻找最接近用户输入时间的记录
-            // 八字一个时辰为2小时，我们应以用户输入时间所在的那个时辰的起始时间为准
-            for (const row of rows) {
-                const rowDate = new Date(row.gregorian_datetime);
-                const rowHour = rowDate.getHours();
-                
-                // 八字时辰的判断逻辑：子时跨日，需要特殊处理
-                if (targetHour === 23 && rowHour === 23) {
-                     return resolve([row.gregorian_datetime]);
-                }
-                if (targetHour < 23 && (rowHour >= targetHour && rowHour < targetHour + 2) ) {
-                    // 对于非子时，我们只要找到对应小时区间的记录即可
-                    // 为简化，我们直接取整点/奇数小时的记录
-                    if(rowHour % 2 === 1 || rowHour === 0){
-                        return resolve([row.gregorian_datetime]);
-                    }
-                }
-            }
-
-            // 如果没有找到精确匹配的时辰，则返回空
-            resolve([]);
         });
     });
 };
