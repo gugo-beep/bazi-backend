@@ -1,15 +1,11 @@
-// gugo-beep/bazi-backend/bazi-backend-18275ce3be8ede12177b43420d0b622777a7d327/src/databaseService.js
+// src/databaseService.js
 
 import sqlite3 from 'sqlite3';
-import path from 'path';
-import { fileURLToPath } from 'url';
+import config from '../config.js'; // 导入配置
 
-// --- 数据库文件路径设置 ---
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-const BAZI_DB_PATH = path.resolve(__dirname, '../data/bazi_data.db');
-const SOLAR_TERMS_DB_PATH = path.resolve(__dirname, '../data/SolarTerms.db');
+// --- 数据库文件路径设置 (从配置中心读取) ---
+const BAZI_DB_PATH = config.database.bazi;
+const SOLAR_TERMS_DB_PATH = config.database.solarTerms;
 
 // --- 数据库连接池 ---
 let baziDb = null;
@@ -35,7 +31,7 @@ const getSolarTermsDb = () => {
     return solarTermsDb;
 };
 
-// ... 其他未修改的函数保持原样 ...
+// ... 后续所有数据库查询函数保持不变 ...
 export const getBaziPillars = (dateTimeString) => {
     const db = getBaziDb();
     const sql = `
@@ -101,11 +97,6 @@ export const getJieQiInRange = (startYear, endYear) => {
     });
 };
 
-/**
- * [重构] 根据四柱信息，查找所有匹配的公历日期时间
- * @param {object} pillars - { year_pillar, month_pillar, day_pillar, hour_pillar }
- * @returns {Promise<string[]>} - 匹配的公历日期时间字符串数组
- */
 export const findAllDatesByPillars = (pillars) => {
     const db = getBaziDb();
     const sql = `
@@ -121,11 +112,6 @@ export const findAllDatesByPillars = (pillars) => {
     });
 };
 
-/**
- * [V2 - 彻底重写] 根据数字化的农历年月日和闰月信息，精确查找对应的公历年月日
- * @param {object} lunarData - { year, month, day, isLeap }
- * @returns {Promise<{year: number, month: number, day: number}|null>} 返回包含公历年月日的对象，如果未找到则返回null
- */
 export const findGregorianDateByLunar = (lunarData) => {
     const db = getBaziDb();
     const sql = `
@@ -152,7 +138,7 @@ export const findGregorianDateByLunar = (lunarData) => {
                     day: row.gregorian_day
                 });
             } else {
-                resolve(null); // 如果没有找到匹配的日期，返回 null
+                resolve(null);
             }
         });
     });

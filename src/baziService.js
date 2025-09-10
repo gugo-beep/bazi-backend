@@ -1,4 +1,4 @@
-// gugo-beep/bazi-backend/bazi-backend-18275ce3be8ede12177b43420d0b622777a7d327/src/baziService.js
+// src/baziService.js
 
 import * as databaseService from './databaseService.js';
 import * as inputProcessor from './inputProcessor.js';
@@ -8,6 +8,8 @@ import ZHI_HIDE_GAN from '../data/ZHI_HIDE_GAN.js';
 import { calculateHarmRelations } from './harmCalculator.js';
 import { calculateShensha } from './shenshaCalculator.js';
 import { calculateAuxiliaryFeatures } from './auxiliaryCalculator.js';
+// 导入常量
+import { GENDER, PILLAR_TYPE, GAN_ZHI_TYPE, ID, SHEN_SHEN } from './constants.js';
 
 // ... 文件顶部的辅助工具代码保持不变 ...
 const GAN = ['甲', '乙', '丙', '丁', '戊', '己', '庚', '辛', '壬', '癸'];
@@ -35,7 +37,8 @@ async function calculateQiYun(gregorianDateStr, gender, yearGan) {
   const birthYear = birthDate.getFullYear();
   const yangGan = ['甲', '丙', '戊', '庚', '壬'];
   const isYangNian = yangGan.includes(yearGan);
-  const isShunPai = (isYangNian && gender === '男') || (!isYangNian && gender === '女');
+  // 使用常量
+  const isShunPai = (isYangNian && gender === GENDER.MALE) || (!isYangNian && gender === GENDER.FEMALE);
 
   const jieqiData = await databaseService.getJieQiInRange(birthYear - 1, birthYear + 1);
   if (!jieqiData || jieqiData.length === 0) {
@@ -110,7 +113,8 @@ async function generateDayun(birthDateStr, pillars, dayGan, qiYunInfo) {
     for (let i = 0; i < 10; i++) {
         if (i === 0) {
             const qiyunqian = {
-                id: 'qyq', type: '起运前', value: null, gan: null, zhi: null, nayin: null, shensha: [],
+                // 使用常量
+                id: ID.QIYUNQIAN, type: PILLAR_TYPE.QIYUNQIAN, value: null, gan: null, zhi: null, nayin: null, shensha: [],
                 start_year: new Date(birthDateStr).getFullYear(),
                 end_year: qiYunInfo.startYear - 1,
                 start_age: 1,
@@ -127,13 +131,13 @@ async function generateDayun(birthDateStr, pillars, dayGan, qiYunInfo) {
                 const xiaoYunGan = currentXiaoYunGanZhi.substring(0, 1);
                 const xiaoYunZhi = currentXiaoYunGanZhi.substring(1);
                 qiyunqian.liunian.push({
-                    id: `ln0_${j}p`, type: '流年', value: currentLiuNianGanZhi, nayin: NA_YIN[currentLiuNianGanZhi], shensha: [], year, age,
-                    gan: { id: `ln0_${j}g`, type: '流年干', value: liuNianGan, shishen: ganInfoCache[liuNianGan].shishen, shensha: [] },
-                    zhi: { id: `ln0_${j}z`, type: '流年支', value: liuNianZhi, canggan: zhiInfoCache[liuNianZhi].canggan, shensha: [] },
+                    id: `ln0_${j}p`, type: PILLAR_TYPE.LIUNIAN, value: currentLiuNianGanZhi, nayin: NA_YIN[currentLiuNianGanZhi], shensha: [], year, age,
+                    gan: { id: `ln0_${j}g`, type: GAN_ZHI_TYPE.LIUNIAN_GAN, value: liuNianGan, shishen: ganInfoCache[liuNianGan].shishen, shensha: [] },
+                    zhi: { id: `ln0_${j}z`, type: GAN_ZHI_TYPE.LIUNIAN_ZHI, value: liuNianZhi, canggan: zhiInfoCache[liuNianZhi].canggan, shensha: [] },
                     xiaoYun: {
-                      id: `xy0_${j}p`, type: '小运', value: currentXiaoYunGanZhi, nayin: NA_YIN[currentXiaoYunGanZhi], shensha: [],
-                      gan: { id: `xy0_${j}g`, type: '小运干', value: xiaoYunGan, shishen: ganInfoCache[xiaoYunGan].shishen, shensha: [] },
-                      zhi: { id: `xy0_${j}z`, type: '小运支', value: xiaoYunZhi, canggan: zhiInfoCache[xiaoYunZhi].canggan, shensha: [] }
+                      id: `xy0_${j}p`, type: PILLAR_TYPE.XIAOYUN, value: currentXiaoYunGanZhi, nayin: NA_YIN[currentXiaoYunGanZhi], shensha: [],
+                      gan: { id: `xy0_${j}g`, type: GAN_ZHI_TYPE.XIAOYUN_GAN, value: xiaoYunGan, shishen: ganInfoCache[xiaoYunGan].shishen, shensha: [] },
+                      zhi: { id: `xy0_${j}z`, type: GAN_ZHI_TYPE.XIAOYUN_ZHI, value: xiaoYunZhi, canggan: zhiInfoCache[xiaoYunZhi].canggan, shensha: [] }
                     }
                 });
                 currentLiuNianGanZhi = getNextGanZhi(currentLiuNianGanZhi, 1);
@@ -147,10 +151,10 @@ async function generateDayun(birthDateStr, pillars, dayGan, qiYunInfo) {
         const daYunGan = currentDaYunGanZhi.substring(0, 1);
         const daYunZhi = currentDaYunGanZhi.substring(1);
         const daYunPillar = {
-            id: `dy${i}p`, type: '大运', value: currentDaYunGanZhi, nayin: NA_YIN[currentDaYunGanZhi], shensha: [],
+            id: `dy${i}p`, type: PILLAR_TYPE.DAYUN, value: currentDaYunGanZhi, nayin: NA_YIN[currentDaYunGanZhi], shensha: [],
             start_year: daYunStartYear, end_year: daYunStartYear + 9, start_age: daYunStartAge,
-            gan: { id: `dy${i}g`, type: '大运干', value: daYunGan, shishen: ganInfoCache[daYunGan].shishen, shensha: [] },
-            zhi: { id: `dy${i}z`, type: '大运支', value: daYunZhi, canggan: zhiInfoCache[daYunZhi].canggan, shensha: [] },
+            gan: { id: `dy${i}g`, type: GAN_ZHI_TYPE.DAYUN_GAN, value: daYunGan, shishen: ganInfoCache[daYunGan].shishen, shensha: [] },
+            zhi: { id: `dy${i}z`, type: GAN_ZHI_TYPE.DAYUN_ZHI, value: daYunZhi, canggan: zhiInfoCache[daYunZhi].canggan, shensha: [] },
             liunian: []
         };
         let currentLiuNianGanZhi = getNextGanZhi(birthYearGanZhi, daYunStartAge - 1);
@@ -158,10 +162,10 @@ async function generateDayun(birthDateStr, pillars, dayGan, qiYunInfo) {
             const liuNianGan = currentLiuNianGanZhi.substring(0, 1);
             const liuNianZhi = currentLiuNianGanZhi.substring(1);
             daYunPillar.liunian.push({
-                id: `ln${i}_${j}p`, type: '流年', value: currentLiuNianGanZhi, nayin: NA_YIN[currentLiuNianGanZhi], shensha: [],
+                id: `ln${i}_${j}p`, type: PILLAR_TYPE.LIUNIAN, value: currentLiuNianGanZhi, nayin: NA_YIN[currentLiuNianGanZhi], shensha: [],
                 year: daYunStartYear + j, age: daYunStartAge + j, xiaoYun: null,
-                gan: { id: `ln${i}_${j}g`, type: '流年干', value: liuNianGan, shishen: ganInfoCache[liuNianGan].shishen, shensha: [] },
-                zhi: { id: `ln${i}_${j}z`, type: '流年支', value: liuNianZhi, canggan: zhiInfoCache[liuNianZhi].canggan, shensha: [] }
+                gan: { id: `ln${i}_${j}g`, type: GAN_ZHI_TYPE.LIUNIAN_GAN, value: liuNianGan, shishen: ganInfoCache[liuNianGan].shishen, shensha: [] },
+                zhi: { id: `ln${i}_${j}z`, type: GAN_ZHI_TYPE.LIUNIAN_ZHI, value: liuNianZhi, canggan: zhiInfoCache[liuNianZhi].canggan, shensha: [] }
             });
             currentLiuNianGanZhi = getNextGanZhi(currentLiuNianGanZhi, 1);
         }
@@ -174,20 +178,44 @@ function generateOriginalPillar(pillarType, pillarStr, dayGan) {
   const gan = pillarStr.substring(0, 1);
   const zhi = pillarStr.substring(1, 2);
   const nayin = NA_YIN[pillarStr];
+  
   let shishenGan, idPrefix, typeText, ganTypeText, zhiTypeText;
-  if (pillarType === 'year') {
-    idPrefix = 'y'; typeText = '年柱'; ganTypeText = '年干'; zhiTypeText = '年支';
-    shishenGan = SHI_SHEN_GAN[dayGan][gan];
-  } else if (pillarType === 'month') {
-    idPrefix = 'm'; typeText = '月柱'; ganTypeText = '月干'; zhiTypeText = '月支';
-    shishenGan = SHI_SHEN_GAN[dayGan][gan];
-  } else if (pillarType === 'day') {
-    idPrefix = 'd'; typeText = '日柱'; ganTypeText = '日干'; zhiTypeText = '日支';
-    shishenGan = '日主';
-  } else { // hour
-    idPrefix = 't'; typeText = '时柱'; ganTypeText = '时干'; zhiTypeText = '时支';
-    shishenGan = SHI_SHEN_GAN[dayGan][gan];
+
+  // 使用常量替换硬编码字符串
+  switch(pillarType) {
+    case 'year':
+      idPrefix = 'y'; 
+      typeText = PILLAR_TYPE.YEAR; 
+      ganTypeText = GAN_ZHI_TYPE.YEAR_GAN; 
+      zhiTypeText = GAN_ZHI_TYPE.YEAR_ZHI;
+      shishenGan = SHI_SHEN_GAN[dayGan][gan];
+      break;
+    case 'month':
+      idPrefix = 'm'; 
+      typeText = PILLAR_TYPE.MONTH; 
+      ganTypeText = GAN_ZHI_TYPE.MONTH_GAN; 
+      zhiTypeText = GAN_ZHI_TYPE.MONTH_ZHI;
+      shishenGan = SHI_SHEN_GAN[dayGan][gan];
+      break;
+    case 'day':
+      idPrefix = 'd'; 
+      typeText = PILLAR_TYPE.DAY; 
+      ganTypeText = GAN_ZHI_TYPE.DAY_GAN; 
+      zhiTypeText = GAN_ZHI_TYPE.DAY_ZHI;
+      shishenGan = SHEN_SHEN.DAY_MASTER;
+      break;
+    case 'hour':
+      idPrefix = 't'; 
+      typeText = PILLAR_TYPE.HOUR; 
+      ganTypeText = GAN_ZHI_TYPE.HOUR_GAN; 
+      zhiTypeText = GAN_ZHI_TYPE.HOUR_ZHI;
+      shishenGan = SHI_SHEN_GAN[dayGan][gan];
+      break;
+    default:
+        // 添加一个默认处理，增强代码健壮性
+        throw new Error(`未知的四柱类型: ${pillarType}`);
   }
+
   const canggan = calculateCangGan(zhi, dayGan);
   return {
     id: `${idPrefix}p`, type: typeText, value: pillarStr, nayin: nayin, shensha: [],
@@ -234,13 +262,6 @@ function createCalculationContext(baziProfile, gender, gregorianDate) {
   return { baziProfile, baziIndex, flatMap, gender, gregorianDate };
 }
 
-
-/**
- * [V2] 核心计算函数：只为一个明确的公历日期进行排盘
- * @param {string} gregorianDate - 唯一、明确的公历日期 YYYY-MM-DD HH:MM:SS
- * @param {string} gender - 性别
- * @returns {Promise<object>} 完整的八字分析 JSON 对象
- */
 async function calculateBaziProfileForSingleDate(gregorianDate, gender) {
   const pillarsFromDb = await databaseService.getBaziPillars(gregorianDate);
   if (!pillarsFromDb) {
@@ -291,26 +312,11 @@ async function calculateBaziProfileForSingleDate(gregorianDate, gender) {
   return finalOutput;
 }
 
-
-/**
- * [V2] 主服务入口函数，现拆分为两步
- * 第一步：根据用户输入找到所有可能的公历日期
- * @param {string} userInput - 用户的原始输入 (公历, 农历, 或四柱)
- * @returns {Promise<string[]>} 一个包含所有可能性公历日期的数组
- */
 export async function findPossibleGregorianDates(userInput) {
     const gregorianDates = await inputProcessor.normalizeToGregorian(userInput);
     return gregorianDates;
 }
 
-/**
- * [V2] 主服务入口函数
- * 第二步：根据用户选择的公历日期进行计算
- * @param {string} chosenDate - 用户最终选择的公历日期
- * @param {string} gender - 性别
- * @returns {Promise<object>} 完整的八字分析 JSON 对象
- */
 export async function generateBaziProfile(chosenDate, gender) {
-    // 现在这个函数直接调用核心计算模块
     return await calculateBaziProfileForSingleDate(chosenDate, gender);
 }
